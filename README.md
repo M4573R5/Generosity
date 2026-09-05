@@ -1,2 +1,0 @@
-# Generosity
-Weekend Challenge
