@@ -149,6 +149,7 @@ activemq-data/
 
 # Environments
 .env
+.impact_hub.db
 .envrc
 .venv
 env/
