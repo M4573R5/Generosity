@@ -1,0 +1,89 @@
+<!-- templates/dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-Activated Equity Pipeline</title>
+    <!-- <script src="https://jsdelivr.net"></script> -->
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans p-4 md:p-8">
+
+    <main class="max-w-4xl mx-auto">
+        <!-- Hackathon Header Highlighting All 4 Sponsor Categories -->
+        <header class="mb-8 border-b-4 border-emerald-600 pb-4">
+            <h1 class="text-3xl font-black tracking-tight text-emerald-800">Equitable Impact Valve</h1>
+            <p class="text-slate-600 mt-1 font-medium">Empowering communities through voice-to-blockchain resource routing.</p>
+            <div class="flex flex-wrap gap-2 mt-3 text-[10px] font-bold uppercase tracking-wider text-white">
+                <span class="bg-blue-600 px-2 py-0.5 rounded-sm">❄️ Snowflake Data</span>
+                <span class="bg-purple-600 px-2 py-0.5 rounded-sm">⛓️ Solana Web3</span>
+                <span class="bg-orange-600 px-2 py-0.5 rounded-sm">🎙️ ElevenLabs Voice</span>
+                <span class="bg-cyan-600 px-2 py-0.5 rounded-sm">🤖 Google AI Core</span>
+            </div>
+        </header>
+
+        <!-- Google AI Voice-Intake Simulation Sandbox -->
+        <section class="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-xs mb-8" aria-labelledby="voice-section-title">
+            <h2 id="voice-section-title" class="text-lg font-bold text-slate-800 mb-2">🎙️ Simulate Spoken Field Report Submission</h2>
+            <p class="text-sm text-slate-500 mb-4">Instead of complex registration forms, field organizers voice their direct ground needs. Google AI processes the unstructured audio transcript instantly.</p>
+            
+            <form action="/voice-intake" method="post" class="space-y-3">
+                <label for="raw_transcript" class="sr-only">Spoken Voice Transcript</label>
+                <textarea 
+                    id="raw_transcript" 
+                    name="raw_transcript" 
+                    rows="2" 
+                    class="w-full border-2 border-slate-200 rounded-lg p-3 text-sm focus:border-emerald-600 focus:outline-none"
+                    placeholder='e.g., "Hey, we are facing intense crop flooding near our village center. We need roughly eight hundred dollars for emergency clean canvas covers right now."'
+                ></textarea>
+                <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 rounded-lg text-sm transition-colors shadow-xs">
+                    Submit Field Voice to AI Pipeline
+                </button>
+            </form>
+        </section>
+
+        <!-- Live Queue Display Sort Map Ordered by Snowflake Priority Scores -->
+        <h2 class="text-xl font-black text-slate-800 mb-4">📊 Prioritized Active Resilience Queue</h2>
+        <div class="space-y-6">
+            {% for project, score in projects_with_scores %}
+            <article class="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-xs" aria-labelledby="heading-{{ project.id }}">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <span class="bg-emerald-100 text-emerald-900 text-xs font-black px-2.5 py-1 rounded-sm">
+                        Equity Metric Rank: {{ score }}
+                    </span>
+                    <span class="text-[11px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-sm">Wallet: {{ project.solana_wallet[:12] }}...</span>
+                </div>
+
+                <h3 id="heading-{{ project.id }}" class="text-xl font-extrabold tracking-tight">{{ project.title }}</h3>
+                <p class="text-xs text-slate-400 mb-4">Field Collective Operator: {{ project.organization }}</p>
+
+                <!-- Graphic Progress Indicator Component -->
+                <div class="mb-4">
+                    <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200">
+                        <div class="bg-emerald-600 h-full" style="width: {{ (project.funding_raised / project.funding_goal) * 100 }}%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs font-bold mt-1 text-slate-600">
+                        <span>Allocated: ${{ "{:,.2f}".format(project.funding_raised) }}</span>
+                        <span>Goal Requirement: ${{ "{:,.2f}".format(project.funding_goal) }}</span>
+                    </div>
+                </div>
+
+                <!-- Action Module interface -->
+                <form action="/donate/{{ project.id }}" method="post" class="flex gap-2">
+                    <input 
+                        type="number" 
+                        name="amount" 
+                        value="25" 
+                        class="w-20 border-2 border-slate-200 rounded-lg text-center font-bold text-sm focus:border-emerald-600 focus:outline-none"
+                    >
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-lg text-xs tracking-wide uppercase transition-colors">
+                        Simulate Direct Solana Contribution
+                    </button>
+                </form>
+            </article>
+            {% endfor %}
+        </div>
+    </main>
+
+</body>
+</html>
