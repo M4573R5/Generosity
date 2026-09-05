@@ -1,34 +1,32 @@
-# main.py
 import uuid
 import asyncio
+from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Form, Depends, BackgroundTasks
+from fastapi import FastAPI, Request, UploadFile, File,Form, Depends, BackgroundTasks
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from typing import Optional
+from dotenv import load_dotenv
 
-
-
+load_dotenv()
 import models
 import processor
+import solana_env
+
+UPLOAD_DIR = Path("static/audio/uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
-    print("🚀 Booting up API core infrastructure systems...")
     models.init_db()
-    seed_initial_demo_records()
+    # seed_initial_demo_records()
     yield
 
 app = FastAPI(lifespan=app_lifespan)
+solana_client = solana_env.SolanaClient(live=False)
 
-# Allow Cross-Origin Resource Sharing (CORS) for decoupled client connections
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 
 def get_db():
     db = models.SessionLocal()
@@ -41,17 +39,30 @@ def asynchronous_worker_thread(project_id: str, raw_transcript: str):
     """Executes heavy AI parsing calls out-of-band without locking main UI requests."""
     db = models.SessionLocal()
     try:
-        pass
+        # 1. Execute slow text extraction via Google AI
+        extracted_data = processor.process_raw_text(raw_transcript)
+        
+        # 2. Persist metrics directly into local database entities
+        project = db.query(models.CommunityProject).filter(models.CommunityProject.id == project_id).first()
+        if project:
+            project.title = extracted_data.title
+            project.funding_goal = extracted_data.estimated_cost_usd
+            project.climate_vulnerability = extracted_data.urgency_rating
+            db.commit()
+            print(f"🔥 [Async System] Updated project row {project_id} successfully.")
+
+            # 3. Handle secondary asset generations like acoustic ElevenLabs feedback files
+            # integrations.generate_voice_broadcast_with_elevenlabs(
+            #     f"Ecosystem Status: New urgent project verified. Objective: {extracted_data.title}"
+            # )
     except Exception as error:
         print(f"❌ Critical Background Worker system failure: {error}")
     finally:
         db.close()
 
 @app.get("/")
-def serve_client_interface():
-    background_tasks.add_task(asynchronous_worker_thread, project_id, raw_transcript)
-
-    processor.process_raw_text("Listen, the storm surge yesterday completely washed out the clean water pipes in the lower river sector. It's a massive crisis. We need about nine hundred and fifty bucks for new heavy-duty valves.")
+def serve_client_interface(background_tasks: BackgroundTasks):
+    # background_tasks.add_task(asynchronous_worker_thread, "123", "Listen, the storm surge yesterday completely washed out the clean water pipes in the lower river sector. It's a massive crisis. We need about nine hundred and fifty bucks for new heavy-duty valves.")
     return FileResponse("templates/index.html")
 
 @app.get("/api/stream-status/{api_token}")
@@ -75,41 +86,50 @@ def read_prioritized_queue(db: Session = Depends(get_db)):
     response_payload = []
     
     for project in all_projects:
+        live_balance_sol = solana_env.get_onchain_balance(project.solana_ref)
+        project.funding_raised = live_balance_sol * 20.0
+        db.commit()
+
         project_data = {
             "id": project.id,
             "title": project.title,
             "organization": project.organization,
             "funding_goal": project.funding_goal,
             "funding_raised": project.funding_raised,
-            "solana_wallet": project.solana_wallet
+            "solana_wallet": project.solana_wallet,
+            "solana_safe_pda": project.solana_safe_pda or "Devnet_Vault_Active",
+            "geohash": project.geohash,
+            "created_at": str(project.created_at)
         }
-        response_payload.append({"project": project_data,"score": project.calculate_priority_score()})
-
+        response_payload.append({"project": project_data, "score": project.calculate_priority_score()})
+        
     response_payload.sort(key=lambda x: x["score"], reverse=True)
     return response_payload
 
 @app.post("/api/voice-intake")
-def handle_voice_submission(background_tasks: BackgroundTasks,raw_transcript: str = Form(...),db: Session = Depends(get_db)):
+def handle_voice_submission(background_tasks: BackgroundTasks, raw_transcript: Optional[str] = Form(None),audio_file: Optional[UploadFile] = File(None), db: Session = Depends(get_db)):
     project_id = f"proj_{uuid.uuid4().hex[:6]}"
+    print(raw_transcript)
+    # blockchain_identity = solana_env.generate_new_field_wallet()
+    blockchain_identity = "123"
     placeholder = models.CommunityProject(
         id=project_id,
         title="Processing Incoming Voice Assets...",
         organization="On-Ground Youth Collective",
-        funding_goal=100.0,
-        solana_wallet="SolanaFieldKey_" + uuid.uuid4().hex[:8],
+        funding_goal=10.0,
+        solana_ref=blockchain_identity,
         climate_vulnerability=0.5,
         systemic_marginalization=0.85,
         geographic_isolation=0.70,
-        is_youth_led=True
+        is_youth_led=True,
+        status="INIT"
     )
     db.add(placeholder)
     db.commit()
 
-    # 🚀 THE COMPETITIVE EDGE: Hand the slow AI processing over to background threads out-of-band
     background_tasks.add_task(asynchronous_worker_thread, project_id, raw_transcript)
 
-    # Return immediate JSON confirmation chunk back to vanilla JavaScript fetch call
-    return {"id": placeholder.id, "title": placeholder.title, "solana_wallet": placeholder.solana_wallet}
+    return {"id": project_id, "title": placeholder.title, "solana_wallet": placeholder.solana_ref}
 
 def seed_initial_demo_records():
     db = models.SessionLocal()

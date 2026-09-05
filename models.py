@@ -14,7 +14,7 @@ class CommunityProject(Base):
     organization = Column(String, nullable=False)
     funding_goal = Column(Float, nullable=False)
     funding_raised = Column(Float, default=0.0)
-    solana_wallet = Column(String, nullable=False)
+    solana_ref = Column(String, nullable=False)
     solana_safe_pda = Column(String, nullable=True) 
     geohash = Column(String, nullable=True) 
     climate_vulnerability = Column(Float, default=0.0)
@@ -22,7 +22,7 @@ class CommunityProject(Base):
     geographic_isolation = Column(Float, default=0.0)
     is_youth_led = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
+    status = Column(String, nullable=True) 
     ledgers = relationship("AuditLedger", back_populates="project")
 
     def calculate_priority_score(self) -> float:
@@ -48,7 +48,6 @@ class AuditLedger(Base):
     proof_description = Column(String, nullable=False)
     solana_signature = Column(String, nullable=True) 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
     project = relationship("CommunityProject", back_populates="ledgers")
 
 def init_db():
